@@ -600,6 +600,61 @@ export default {
       scriptConfig: scriptConfigSample,
       sampleConfig: remoteConfigSample
     };
+    },
+     form: {
+        sourceSubUrl: "",
+        clientType: "",
+        customBackend: this.getUrlParam() == "" ? "https://api.v1.mk" : this.getUrlParam(),
+        shortType: "https://v1.mk/short",
+        remoteConfig: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini",
+        excludeRemarks: "",
+        includeRemarks: "",
+        filename: "",
+        rename: "",
+        devid: "",
+        interval: "",
+        emoji: true,
+        nodeList: false,
+        extraset: false,
+        tls13: false,
+        udp: false,
+        xudp: false,
+        tfo: false,
+        sort: false,
+        expand: true,
+        scv: false,
+        fdn: false,
+        appendType: false,
+        insert: false, // 是否插入默认订阅的节点，对应配置项 insert_url
+        new_name: true, // 是否使用 Clash 新字段
+        tpl: {
+          surge: {
+            doh: false // dns 查询是否使用 DoH
+          },
+          clash: {
+            doh: false
+          },
+          singbox: {
+            ipv6: false
+          }
+        }
+      },
+      loading1: false,
+      loading2: false,
+      loading3: false,
+      customSubUrl: "",
+      customShortSubUrl: "",
+      dialogUploadConfigVisible: false,
+      loadConfig: "",
+      dialogLoadConfigVisible: false,
+      uploadFilter: "",
+      uploadScript: "",
+      uploadConfig: "",
+      myBot: tgBotLink,
+      filterConfig: filterConfigSample,
+      scriptConfig: scriptConfigSample,
+      sampleConfig: remoteConfigSample
+    };
   },
   created() {
     document.title = "在线订阅转换工具";
@@ -1029,12 +1084,12 @@ export default {
       data.append("sortscript", encodeURIComponent(this.uploadScript));
       data.append("filterscript", encodeURIComponent(this.uploadFilter));
       this.$axios
-          。post(configScriptBackend, data, {
+          .post(configScriptBackend, data, {
             header: {
               "Content-Type": "application/form-data; charset=utf-8"
             }
           })
-          。then(res => {
+          .then(res => {
             if (res.data.code === 0 && res.data.data !== "") {
               this.$message.success(
                   "自定义JS上传成功，订阅链接已复制到剪贴板（IOS设备和Safari浏览器不支持自动复制API，需手动点击复制按钮）"
@@ -1047,29 +1102,30 @@ export default {
               this.$message.error("自定义JS上传失败: " + res.data.msg);
             }
           })
-          。catch(() => {
+          .catch(() => {
             this.$message.error("自定义JS上传失败");
           })
-          。finally(() => {
+          .finally(() => {
             this.loading2 = false;
           })
     },
     getBackendVersion() {
       this.$axios
-          。get(
+          .get(
               this.form.customBackend + "/version"
           )
-          。then(res => {
+          .then(res => {
             this.backendVersion = res.data.replace(/backend\n$/gm, "");
             this.backendVersion = this.backendVersion.replace("subconverter", "SubConverter");
             let a = this.form.customBackend.indexOf("api.v1.mk") !== -1 || this.form.customBackend.indexOf("sub.d1.mk") !== -1;
             let b = this.form.customBackend.indexOf("127.0.0.1") !== -1;
             a ? this.$message.success(`${this.backendVersion}` + "肥羊负载均衡增强版后端，已屏蔽免费节点池（会返回403），额外支持vless reality+hysteria+hysteria2订阅转换") : b ? this.$message.success(`${this.backendVersion}` + "本地局域网自建版后端") : this.$message.success(`${this.backendVersion}` + "官方原版后端不支持vless/hysteria订阅转换");
           })
-          。catch(() => {
+          .catch(() => {
             this.$message.error("请求SubConverter版本号返回数据失败，该后端不可用！");
           });
     }
   }
 };
 </script>
+
