@@ -4,8 +4,14 @@
       <el-col>
         <el-card>
           <div slot="header">
-            <span>原项目</span>
             <svg-icon class="gayhub" icon-class="github" style="float:left" @click="goToProject"/>
+            <svg-icon class="dianbao" icon-class="telegram" style="float:left;margin-left: 10px"
+                      @click="gotoTgChannel"/>
+            <svg-icon class="bilibili" icon-class="bilibili" style="float:right;margin-left:10px"
+                      @click="gotoBiliBili"/>
+            <svg-icon class="youguan" icon-class="youtube" style="float:right;margin-left:10px" @click="gotoYouTuBe"/>
+            <svg-icon class="channel" icon-class="telegram" style="float:right;margin-left: 10px"
+                      @click="gotoTgChannel"/>
             <div style="text-align:center;font-size:15px">订 阅 转 换</div>
           </div>
           <el-container>
@@ -15,7 +21,7 @@
                     v-model="form.sourceSubUrl"
                     type="textarea"
                     rows="3"
-                    placeholder="支持各种订阅链接或单节点链接,多个链接每行一个或用 | 分隔"
+                    placeholder="支持各种订阅链接或单节点链接，多个链接每行一个或用 | 分隔"
                 />
               </el-form-item>
               <el-form-item label="生成类型:">
@@ -33,6 +39,17 @@
                     style="width: 100%"
                 >
                   <el-option v-for="(v, k) in options.customBackend" :key="k" :label="k" :value="v"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="短链选择:">
+                <el-select
+                    v-model="form.shortType"
+                    allow-create
+                    filterable
+                    placeholder="可输入其他可用短链API"
+                    style="width: 100%"
+                >
+                  <el-option v-for="(v, k) in options.shortTypes" :key="k" :label="k" :value="v"></el-option>
                 </el-select>
               </el-form-item>
               <el-form-item label="远程配置:">
@@ -71,20 +88,23 @@
                       </el-form-item>
                     </template>
                     <el-form-item label="包含节点:">
-                      <el-input v-model="form.includeRemarks" placeholder="要保留的节点,支持正则"/>
+                      <el-input v-model="form.includeRemarks" placeholder="要保留的节点，支持正则"/>
                     </el-form-item>
                     <el-form-item label="排除节点:">
-                      <el-input v-model="form.excludeRemarks" placeholder="要排除的节点,支持正则"/>
+                      <el-input v-model="form.excludeRemarks" placeholder="要排除的节点，支持正则"/>
                     </el-form-item>
                     <el-form-item label="节点命名:">
-                      <el-input v-model="form.rename" placeholder="举例：`原@现``a@b``1@2`,|符可用\转义"/>
+                      <el-input v-model="form.rename" placeholder="举例：`a@b``1@2`，|符可用\转义"/>
+                    </el-form-item>
+                    <el-form-item label="远程设备:">
+                      <el-input v-model="form.devid" placeholder="用于设置QuantumultX的远程设备ID"/>
                     </el-form-item>
                     <el-form-item label="更新间隔:">
-                      <el-input v-model="form.interval" placeholder="返用于设置托管配置更新间隔,单位为天"/>
+                      <el-input v-model="form.interval" placeholder="返用于设置托管配置更新间隔，单位为天"/>
                     </el-form-item>
                     <el-form-item label="订阅命名:">
                       <el-input v-model="form.filename"
-                                placeholder="返回的订阅文件名,可以在支持文件名的客户端中显示出来"/>
+                                placeholder="返回的订阅文件名，可以在支持文件名的客户端中显示出来"/>
                     </el-form-item>
                     <el-form-item class="eldiy" label-width="0px">
                       <el-row type="flex">
@@ -183,6 +203,19 @@
                   </el-button>
                 </el-input>
               </el-form-item>
+              <el-form-item label="订阅短链:">
+                <el-input class="copy-content" v-model="customShortSubUrl"
+                          placeholder="输入自定义短链接后缀，点击生成短链接可反复生成">
+                  <el-button
+                      slot="append"
+                      v-clipboard:copy="customShortSubUrl"
+                      v-clipboard:success="onCopy"
+                      ref="copy-btn"
+                      icon="el-icon-document-copy"
+                  >复制
+                  </el-button>
+                </el-input>
+              </el-form-item>
               <el-form-item label-width="0px" style="margin-top: 40px; text-align: center">
                 <el-button
                     style="width: 120px"
@@ -190,6 +223,14 @@
                     @click="makeUrl"
                     :disabled="form.sourceSubUrl.length === 0 || btnBoolean"
                 >生成订阅链接
+                </el-button>
+                <el-button
+                    style="width: 120px"
+                    type="danger"
+                    @click="makeShortUrl"
+                    :loading="loading1"
+                    :disabled="customSubUrl.length === 0"
+                >生成短链接
                 </el-button>
               </el-form-item>
               <el-form-item label-width="0px" style="text-align: center">
@@ -210,11 +251,62 @@
                 >从URL解析
                 </el-button>
               </el-form-item>
+              <el-form-item label-width="0px" style="text-align: center">
+                <el-button
+                    style="width: 250px;"
+                    type="success"
+                    icon="el-icon-video-play"
+                    @click="centerDialogVisible = true"
+                >视频教程
+                </el-button>
+              </el-form-item>
             </el-form>
           </el-container>
         </el-card>
       </el-col>
     </el-row>
+    <el-dialog
+        title="请选择需要观看的视频教程"
+        :visible.sync="centerDialogVisible"
+        :show-close="false"
+        width="40vh"
+        top="30vh"
+        center>
+      <div label-width="0px" style="text-align: center">
+        <el-button
+            style="width: 200px;"
+            type="primary"
+            icon="el-icon-video-play"
+            @click="gotoBasicVideo();centerDialogVisible = false"
+        >基础视频教程
+        </el-button>
+      </div>
+      <div label-width="0px" style="text-align: center;margin: 3vh 0 2vh">
+        <el-button
+            style="width: 200px;"
+            type="danger"
+            icon="el-icon-video-play"
+            @click="gotoAdvancedVideo();centerDialogVisible = false"
+        >进阶视频教程
+        </el-button>
+      </div>
+      <div label-width="0px" style="text-align: center;margin: 3vh 0 2vh">
+        <el-button
+            style="width: 200px;"
+            type="warning"
+            icon="el-icon-download"
+            @click="toolsDown"
+        >代理工具集合
+        </el-button>
+      </div>
+    </el-dialog>
+    <el-dialog
+        :visible.sync="dialogUploadConfigVisible"
+        :show-close="false"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
+        width="80%"
+    >
       <el-tabs v-model="activeName" type="card">
         <el-tab-pane label="远程配置上传" name="first">
           <el-link type="danger" :href="sampleConfig" style="margin-bottom: 15px" target="_blank" icon="el-icon-info">
@@ -249,7 +341,7 @@
             <el-form-item prop="uploadScript">
               <el-input
                   v-model="uploadScript"
-                  placeholder="本功能暂停使用,如有兴趣,自行去我的GitHub参考sub-web-api项目部署！"
+                  placeholder="本功能暂停使用，如有兴趣，自行去我的GitHub参考sub-web-api项目部署！"
                   type="textarea"
                   :autosize="{ minRows: 15, maxRows: 15}"
                   maxlength="50000"
@@ -275,9 +367,9 @@
             <el-form-item prop="uploadFilter">
               <el-input
                   v-model="uploadFilter"
-                  placeholder="本功能暂停使用,如有兴趣,自行去我的GitHub参考sub-web-api项目部署！"
+                  placeholder="本功能暂停使用，如有兴趣，自行去我的GitHub参考sub-web-api项目部署！"
                   type="textarea"
-                  :autosize="{ minRows: 15， maxRows: 15}"
+                  :autosize="{ minRows: 15, maxRows: 15}"
                   maxlength="50000"
                   show-word-limit
               ></el-input>
@@ -310,7 +402,7 @@
           <el-input
               v-model="loadConfig"
               type="textarea"
-              :autosize="{ minRows: 15， maxRows: 15}"
+              :autosize="{ minRows: 15, maxRows: 15}"
               maxlength="5000"
               show-word-limit
           ></el-input>
@@ -528,7 +620,7 @@ export default {
     if (typeof darkMedia.addEventListener === 'function' || typeof lightMedia.addEventListener === 'function') {
       lightMedia.addEventListener('change', callback);
       darkMedia.addEventListener('change', callback);
-    } //监听系统主题,自动切换！
+    } //监听系统主题，自动切换！
   },
   methods: {
     selectChanged() {
@@ -551,13 +643,13 @@ export default {
       const darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
       if (getLocalTheme) {
         document.getElementsByTagName('body')[0].className = getLocalTheme;
-      } //读取localstorage,优先级最高！
+      } //读取localstorage，优先级最高！
       else if (getLocalTheme == null || getLocalTheme == "undefined" || getLocalTheme == "") {
         if (new Date().getHours() >= 19 || new Date().getHours() < 7) {
           document.getElementsByTagName('body')[0].setAttribute('class', 'dark-mode');
         } else {
           document.getElementsByTagName('body')[0].setAttribute('class', 'light-mode');
-        } //根据当前时间来判断,用来对付QQ等不支持媒体变量查询的浏览器
+        } //根据当前时间来判断，用来对付QQ等不支持媒体变量查询的浏览器
         if (lightMode && lightMode.matches) {
           document.getElementsByTagName('body')[0].setAttribute('class', 'light-mode');
         }
@@ -578,7 +670,7 @@ export default {
       }
     },
     tanchuang() {
-      this.$alert(`<div style="text-align:center;font-size:15px"><strong><span style="font-size:20px">本站官方TG交流群：</span><span><a href="https://t.me/feiyangdigital" target="_blank" style="color:red;font-size:20px;text-decoration:none">点击加入</a></span></strong></br><strong><span style="font-size:20px">IEPL高端机场（<span style="color:blue">原生支持各种流媒体</span>）：</span><span><a href="https://www.mcwy.org" style="color:red;font-size:20px;text-decoration:none">点击注册</a></span></strong></br><strong><span style="font-size:20px">奈飞、ChatGPT合租（<span style="color:blue">优惠码：feiyang</span>）：</span><span><a href="https://hezu.v1.mk/" style="color:red;font-size:20px;text-decoration:none">点击上车</a></span></strong></br><strong><span style="font-size:20px">IOS外区应用代购：</span><span><a href="https://fk.myue.club" style="color:red;font-size:20px;text-decoration:none">点击查看</a></span></strong></br><strong><span style="font-size:20px">牧场流媒体支持状态实时检测图：</span><span><a href="https://nf.mccloud.vip" style="color:red;font-size:20px;text-decoration:none">点击查看</a></span></strong></br>本站服务器赞助机场-牧场物语,是一家拥有BGP中继+IEPL企业级内网专线的高端机场,适合各个价位要求的用户,牧场物语采用最新的奈飞非自制剧解决方案,出口随机更换IP,确保尽可能的每个用户可以用上独立IP,以此来稳定解决奈飞非自制剧的封锁,并推出7*24小时奈飞非自制剧节点自动检测系统,用户再也不用自己手动一个个的乱试节点了,目前牧场的新加坡,台湾等节区域点均可做到24H稳定非自制剧观看！</br></div>`, '信息面板', {
+      this.$alert(`<div style="text-align:center;font-size:15px"><strong><span style="font-size:20px">本站官方TG交流群：</span><span><a href="https://t.me/feiyangdigital" target="_blank" style="color:red;font-size:20px;text-decoration:none">点击加入</a></span></strong></br><strong><span style="font-size:20px">IEPL高端机场（<span style="color:blue">原生支持各种流媒体</span>）：</span><span><a href="https://www.mcwy.org" style="color:red;font-size:20px;text-decoration:none">点击注册</a></span></strong></br><strong><span style="font-size:20px">奈飞、ChatGPT合租（<span style="color:blue">优惠码：feiyang</span>）：</span><span><a href="https://hezu.v1.mk/" style="color:red;font-size:20px;text-decoration:none">点击上车</a></span></strong></br><strong><span style="font-size:20px">IOS外区应用代购：</span><span><a href="https://fk.myue.club" style="color:red;font-size:20px;text-decoration:none">点击查看</a></span></strong></br><strong><span style="font-size:20px">牧场流媒体支持状态实时检测图：</span><span><a href="https://nf.mccloud.vip" style="color:red;font-size:20px;text-decoration:none">点击查看</a></span></strong></br>本站服务器赞助机场-牧场物语，是一家拥有BGP中继+IEPL企业级内网专线的高端机场，适合各个价位要求的用户，牧场物语采用最新的奈飞非自制剧解决方案，出口随机更换IP，确保尽可能的每个用户可以用上独立IP，以此来稳定解决奈飞非自制剧的封锁，并推出7*24小时奈飞非自制剧节点自动检测系统，用户再也不用自己手动一个个的乱试节点了，目前牧场的新加坡，台湾等节区域点均可做到24H稳定非自制剧观看！</br></div>`, '信息面板', {
         confirmButtonText: '确定',
         dangerouslyUseHTMLString: true,
         customClass: 'msgbox'
@@ -740,7 +832,7 @@ export default {
             if (res.data.Code === 1 && res.data.ShortUrl !== "") {
               this.customShortSubUrl = res.data.ShortUrl;
               this.$copyText(res.data.ShortUrl);
-              this.$message.success("短链接已复制到剪贴板（IOS设备和Safari浏览器不支持自动复制API,需手动点击复制按钮）");
+              this.$message.success("短链接已复制到剪贴板（IOS设备和Safari浏览器不支持自动复制API，需手动点击复制按钮）");
             } else {
               this.$message.error("短链接获取失败：" + res.data.Message);
             }
@@ -765,7 +857,7 @@ export default {
           .then(res => {
             if (res.data.code === 0 && res.data.data !== "") {
               this.$message.success(
-                  "远程配置上传成功,配置链接已复制到剪贴板"
+                  "远程配置上传成功，配置链接已复制到剪贴板"
               );
               this.form.remoteConfig = res.data.data;
               this.$copyText(this.form.remoteConfig);
@@ -794,7 +886,7 @@ export default {
             });
             return response.url;
           } catch (e) {
-            this.$message.error("解析短链接失败,请检查短链接服务端是否配置跨域：" + e)
+            this.$message.error("解析短链接失败，请检查短链接服务端是否配置跨域：" + e)
           } finally {
             this.loading3 = false;
           }
@@ -937,15 +1029,15 @@ export default {
       data.append("sortscript", encodeURIComponent(this.uploadScript));
       data.append("filterscript", encodeURIComponent(this.uploadFilter));
       this.$axios
-          .post(configScriptBackend, data, {
+          。post(configScriptBackend, data, {
             header: {
               "Content-Type": "application/form-data; charset=utf-8"
             }
           })
-          .then(res => {
+          。then(res => {
             if (res.data.code === 0 && res.data.data !== "") {
               this.$message.success(
-                  "自定义JS上传成功,订阅链接已复制到剪贴板（IOS设备和Safari浏览器不支持自动复制API,需手动点击复制按钮）"
+                  "自定义JS上传成功，订阅链接已复制到剪贴板（IOS设备和Safari浏览器不支持自动复制API，需手动点击复制按钮）"
               );
               this.customSubUrl = res.data.data;
               this.$copyText(res.data.data);
@@ -955,27 +1047,27 @@ export default {
               this.$message.error("自定义JS上传失败: " + res.data.msg);
             }
           })
-          .catch(() => {
+          。catch(() => {
             this.$message.error("自定义JS上传失败");
           })
-          .finally(() => {
+          。finally(() => {
             this.loading2 = false;
           })
     },
     getBackendVersion() {
       this.$axios
-          .get(
+          。get(
               this.form.customBackend + "/version"
           )
-          .then(res => {
+          。then(res => {
             this.backendVersion = res.data.replace(/backend\n$/gm, "");
             this.backendVersion = this.backendVersion.replace("subconverter", "SubConverter");
             let a = this.form.customBackend.indexOf("api.v1.mk") !== -1 || this.form.customBackend.indexOf("sub.d1.mk") !== -1;
             let b = this.form.customBackend.indexOf("127.0.0.1") !== -1;
-            a ? this.$message.success(`${this.backendVersion}` + "肥羊负载均衡增强版后端,已屏蔽免费节点池（会返回403）,额外支持vless reality+hysteria+hysteria2订阅转换") : b ? this.$message.success(`${this.backendVersion}` + "本地局域网自建版后端") : this.$message.success(`${this.backendVersion}` + "官方原版后端不支持vless/hysteria订阅转换");
+            a ? this.$message.success(`${this.backendVersion}` + "肥羊负载均衡增强版后端，已屏蔽免费节点池（会返回403），额外支持vless reality+hysteria+hysteria2订阅转换") : b ? this.$message.success(`${this.backendVersion}` + "本地局域网自建版后端") : this.$message.success(`${this.backendVersion}` + "官方原版后端不支持vless/hysteria订阅转换");
           })
-          .catch(() => {
-            this.$message.error("请求SubConverter版本号返回数据失败,该后端不可用！");
+          。catch(() => {
+            this.$message.error("请求SubConverter版本号返回数据失败，该后端不可用！");
           });
     }
   }
